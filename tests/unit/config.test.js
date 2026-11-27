@@ -13,6 +13,11 @@ describe('loadConfig', () => {
     expect(config).toMatchObject({ port: 8080, host: '0.0.0.0' });
   });
 
+  // Fastify opens a second server for localhost, which shutdown would not wait for.
+  it('listens on one address when HOST is localhost', () => {
+    expect(loadConfig({ DATABASE_URL: url, HOST: 'localhost' }).host).toBe('127.0.0.1');
+  });
+
   it('accepts the postgresql:// scheme', () => {
     expect(loadConfig({ DATABASE_URL: 'postgresql://localhost/x' }).databaseUrl).toBe('postgresql://localhost/x');
   });

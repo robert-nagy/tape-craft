@@ -1,3 +1,5 @@
+import { describeError } from './errors.js';
+
 const QUERY_TIMEOUT_MS = 2000;
 const DEADLINE_MS = 2500;
 
@@ -19,7 +21,7 @@ export function createHealthCheck(pool, { logger }) {
       await Promise.race([pool.query({ text: 'SELECT 1', query_timeout: QUERY_TIMEOUT_MS }), deadline]);
       return true;
     } catch (error) {
-      logger.warn({ err: error.message }, 'database check failed');
+      logger.warn({ err: describeError(error) }, 'database check failed');
       return false;
     } finally {
       clearTimeout(timer);

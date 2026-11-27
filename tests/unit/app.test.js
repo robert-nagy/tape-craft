@@ -58,8 +58,16 @@ describe('static files', () => {
   );
 });
 
+describe('a malformed URL', () => {
+  it('is rejected without echoing it', async () => {
+    const response = await build().inject({ url: '/%E0%A4%A' });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({ error: 'Bad Request' });
+  });
+});
+
 describe('security headers', () => {
-  it.each(['/', '/healthz', '/missing'])('are set on %s', async (url) => {
+  it.each(['/', '/healthz', '/missing', '/%'])('are set on %s', async (url) => {
     const { headers } = await build().inject({ url });
     expect(headers['content-security-policy']).toBe(
       "default-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",

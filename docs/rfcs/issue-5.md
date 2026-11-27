@@ -18,6 +18,7 @@ The repository has tooling but no application code (issue #5). Spotify sign-in, 
 | --- | --- |
 | `src/config.js` | Read and validate environment variables. Fail fast with a message that never echoes a value. |
 | `src/db.js` | Create the `pg` pool with short timeouts and handle idle-client errors. |
+| `src/errors.js` | Turn an error into a log message, including Node's message-less `AggregateError`. |
 | `src/health.js` | Database check with a hard deadline; concurrent calls share one check. |
 | `src/app.js` | Build the Fastify app: static files, `/healthz`, security headers. Takes the health check as an argument so it can be tested without a database. |
 | `src/server.js` | Entry point: wire the parts, listen, shut down on SIGTERM and SIGINT. Requests in progress get 5 s to finish before their connections are closed. |
@@ -45,7 +46,7 @@ The repository has tooling but no application code (issue #5). Spotify sign-in, 
 | `GET /healthz` | 200 `{"status":"ok"}` or 503 `{"status":"unavailable"}` |
 | `GET /manifest.webmanifest`, `/sw.js`, `/offline.html`, icons, stylesheet, script | 200, static |
 
-Commands: `npm start`, `npm run migrate`. Environment variables: `DATABASE_URL` (required), `PORT` (default 3000), `HOST` (default `127.0.0.1`; the image sets `0.0.0.0`).
+Commands: `npm start`, `npm run migrate`. Environment variables: `DATABASE_URL` (required), `PORT` (default 3000), `HOST` (default `127.0.0.1`, which `localhost` also maps to so that there is one listener; the image sets `0.0.0.0`).
 
 ## Data changes
 

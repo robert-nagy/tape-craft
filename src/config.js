@@ -14,5 +14,8 @@ export function loadConfig(env = process.env) {
     throw new Error('PORT must be a whole number from 0 to 65535');
   }
 
-  return { databaseUrl, port: Number(port), host: env.HOST || '127.0.0.1' };
+  // For localhost Fastify opens one server per address, and shutdown only waits for the first.
+  const host = !env.HOST || env.HOST === 'localhost' ? '127.0.0.1' : env.HOST;
+
+  return { databaseUrl, port: Number(port), host };
 }

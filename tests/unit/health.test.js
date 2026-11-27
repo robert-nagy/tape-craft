@@ -19,6 +19,13 @@ describe('createHealthCheck', () => {
     expect(log.warn).toHaveBeenCalledOnce();
   });
 
+  it('logs a cause even when the error has no message', async () => {
+    const log = logger();
+    const error = new AggregateError([new Error('connect ECONNREFUSED ::1:5432')], '');
+    await createHealthCheck({ query: vi.fn().mockRejectedValue(error) }, { logger: log })();
+    expect(log.warn).toHaveBeenCalledWith({ err: 'connect ECONNREFUSED ::1:5432' }, 'database check failed');
+  });
+
   it('is unhealthy when the query throws synchronously', async () => {
     const pool = {
       query: () => {

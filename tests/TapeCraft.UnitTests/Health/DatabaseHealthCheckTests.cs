@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
-using TapeCraft.Api.Infrastructure.Persistence;
+using TapeCraft.Api.Features.Health;
 
 namespace TapeCraft.UnitTests.Health;
 

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using TapeCraft.Api.Infrastructure.Persistence;
 
-namespace TapeCraft.Api.Infrastructure.Persistence;
+namespace TapeCraft.Api.Features.Health;
 
 /// <summary>
 /// Healthy when the database answers within the deadline, which keeps <c>/healthz</c>

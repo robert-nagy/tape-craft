@@ -48,6 +48,12 @@ public sealed class ArchitectureTests
     }
 
     [Fact]
+    public void Features_use_the_outside_world_only_through_interfaces() =>
+        Types().That().ResideInNamespaceMatching($@"^{Features.Replace(".", @"\.")}(\..+)?$")
+            .Should().NotDependOnAny(Classes().That().ResideInNamespaceMatching(@"^TapeCraft\.Api\.Infrastructure(\..+)?$"))
+            .Check(App);
+
+    [Fact]
     public void Infrastructure_and_web_plumbing_do_not_use_features() =>
         Types().That().ResideInNamespaceMatching(@"^TapeCraft\.Api\.(Infrastructure|Web)(\..+)?$")
             .Should().NotDependOnAny(Types().That().ResideInNamespaceMatching($@"^{Features.Replace(".", @"\.")}(\..+)?$"))

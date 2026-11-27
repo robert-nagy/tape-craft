@@ -66,7 +66,7 @@ All configuration comes from environment variables. Never commit credentials.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | yes | | PostgreSQL URL, `postgres://user:password@host:port/database`; `?sslmode=require` is the only option accepted |
+| `DATABASE_URL` | yes | | PostgreSQL URL, `postgres://user:password@host:port/database`; `sslmode` (for example `?sslmode=require`) is the only query parameter accepted |
 | `PORT` | no | `3000` | Port to listen on |
 | `HOST` | no | `127.0.0.1` (`0.0.0.0` in the container image) | Address to listen on |
 
@@ -80,7 +80,7 @@ All configuration comes from environment variables. Never commit credentials.
 | --- | --- | --- |
 | `npm test` | frontend tests (Vitest), then backend unit and architecture tests (xUnit) | |
 | `npm run test:integration` | migrations, health check, shutdown and the container image, against a throwaway PostgreSQL | Docker |
-| `npm run test:e2e` | landing page, installability and offline page in Chromium, against the published app | `npx playwright install chromium`, once |
+| `npm run test:e2e` | landing page, installability and offline page in Chromium, against the published app | the .NET SDK, and `npx playwright install chromium` once |
 
 ### Container
 

@@ -54,9 +54,15 @@ public sealed record AppConfig(string ConnectionString, int Port, string Host)
         return int.Parse(value);
     }
 
-    // Kestrel listens on two addresses for "localhost"; one address is simpler to reason about.
-    private static string ParseHost(string? value) =>
-        string.IsNullOrWhiteSpace(value) || value == "localhost" ? "127.0.0.1" : value.Trim();
+    private static string ParseHost(string? value)
+    {
+        value = value?.Trim();
+        // Kestrel listens on two addresses for "localhost"; one address is simpler to reason about.
+        if (string.IsNullOrEmpty(value) || value == "localhost") return "127.0.0.1";
+        if (Uri.CheckHostName(value) == UriHostNameType.Unknown)
+            throw new AppConfigException("HOST must be an IP address or a host name");
+        return value;
+    }
 }
 
 public sealed class AppConfigException(string message) : Exception(message);

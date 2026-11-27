@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using TapeCraft.Api.Infrastructure.Persistence;
 
 namespace TapeCraft.Api.Features.Health;
 

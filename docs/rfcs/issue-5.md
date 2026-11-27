@@ -19,9 +19,9 @@ Layout and rules: `docs/adr/0001-stack-and-architecture.md`.
 | `TapeCraft.slnx`, `Directory.Build.props`, `Directory.Packages.props` | Solution; nullable references and warnings as errors everywhere; package versions in one place |
 | `src/TapeCraft.Domain/` | Entities `User`, `Token`, `Track`, `Analysis`, `Playlist`, each with only an `Id` for now |
 | `src/TapeCraft.Api/Program.cs` | Entry point: `migrate` runs the migrations, anything else starts the web server |
-| `src/TapeCraft.Api/AppConfig.cs` | Reads and validates `DATABASE_URL`, `PORT` and `HOST`. Errors never include a value |
-| `src/TapeCraft.Api/Features/Health/` | `GET /healthz` |
-| `src/TapeCraft.Api/Infrastructure/Persistence/` | `TapeCraftDbContext`, migrations, the database health check |
+| `src/TapeCraft.Api/AppConfig.cs` | Reads and validates `DATABASE_URL`, `PORT` and `HOST`; a bad value stops the app with a message that never includes the value |
+| `src/TapeCraft.Api/Features/Health/` | `GET /healthz` and the database health check, which uses the database only through `IDatabaseProbe` |
+| `src/TapeCraft.Api/Infrastructure/Persistence/` | `TapeCraftDbContext`, migrations, `NpgsqlDatabaseProbe` |
 | `src/TapeCraft.Api/Web/` | Security headers |
 | `web/` | Vite, React and TypeScript. `npm run build` writes to `src/TapeCraft.Api/wwwroot` |
 | `web/public/` | Manifest, service worker, offline page, stylesheet, icons; served unchanged |

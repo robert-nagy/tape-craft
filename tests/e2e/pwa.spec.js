@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { chromium, expect, test as base } from '@playwright/test';
-import { freePort, startApp } from '../helpers/server.js';
+import { freePort, startApp } from './server.js';
 
 // The pages under test do not need a database, so none is started.
 const databaseUrl = 'postgres://127.0.0.1:1/tapecraft';

@@ -39,7 +39,7 @@ Rules, enforced by architecture tests in `TapeCraft.UnitTests`:
 1. `TapeCraft.Domain` references only the .NET base library: no ASP.NET Core, EF Core or Npgsql.
 2. A feature does not use another feature's types. Shared rules go to the domain; shared plumbing goes to `Infrastructure` or `Web`.
 3. Features depend on interfaces for the outside world (Spotify, the database, the clock); `Infrastructure` implements them.
-   A feature reaches PostgreSQL through a small port shaped by its use case, such as `ISignInStore`, declared and implemented with EF Core in `Infrastructure/Persistence`. A port is not a general repository: it offers what one feature needs, no more. (Decided by the maintainer during issue #3.)
+   A feature reaches PostgreSQL through a small port shaped by its use case, such as `ISignInStore`, declared and implemented with EF Core in `Infrastructure/Persistence`. A port is not a general repository: it offers what one feature needs, no more. (Decided by the maintainer during issue #3.) The architecture tests enforce only that features use interfaces from `Infrastructure`; where a port lives and how broad it is are checked in review.
 
 Lightweight domain-driven design: one glossary of terms (track, liked song, playlist preview), shared by code, issues and UI, and rich domain classes where rules live, such as playlist generation. Plain data handling elsewhere, with no general-purpose repositories over EF Core (use-case ports, rule 3, are not repositories), no domain events and no CQRS split.
 

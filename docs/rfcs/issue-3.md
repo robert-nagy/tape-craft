@@ -95,4 +95,4 @@ None. Two were settled by the maintainer during the run:
 
 ## Approval
 
-- [ ] Design reviewed and approved. Unattended run (`sentinel-sdlc-auto`): implemented without waiting; review in the pull request.
+- [ ] Design reviewed and approved. Unattended run (`sentinel-sdlc-auto`): implemented without waiting for approval. On 2026-11-27 the maintainer settled only the two open questions above; the design as a whole awaits approval in the pull request.

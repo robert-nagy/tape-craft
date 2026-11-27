@@ -1,6 +1,12 @@
 *
 !package.json
 !package-lock.json
+!global.json
+!Directory.Build.props
+!Directory.Packages.props
+!web
 !src
-!migrations
-!public
+web/node_modules
+**/bin
+**/obj
+src/TapeCraft.Api/wwwroot

@@ -4,3 +4,7 @@ playwright-report/
 .env
 .worktrees/
 .sentinel/state/
+bin/
+obj/
+src/TapeCraft.Api/wwwroot/
+.artifacts/

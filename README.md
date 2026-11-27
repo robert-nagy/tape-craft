@@ -19,6 +19,81 @@ A Spotify user's Liked Songs grows into one huge unsorted list. Sorting it into 
 - Save the playlist to the user's Spotify account.
 - Revisit and regenerate saved playlists.
 
+## Getting started
+
+You need the .NET 10 SDK, Node.js 22.22 or later, and a PostgreSQL database.
+
+```sh
+npm ci
+export DATABASE_URL='postgres://USER:PASSWORD@localhost:5432/tapecraft'
+npm run migrate
+npm start
+```
+
+`npm start` builds the React frontend and runs the backend (`dotnet run --project src/TapeCraft.Api`). Then open <http://localhost:3000>. In Google Chrome, use the install button in the address bar to add tape-craft as an app. While working on the frontend, `npm run dev --workspace web` serves it with hot reload on <http://localhost:5173>.
+
+For a throwaway local database:
+
+```sh
+export POSTGRES_PASSWORD="$(openssl rand -hex 16)"
+docker run --rm -d --name tape-craft-db -e POSTGRES_PASSWORD -e POSTGRES_DB=tapecraft -p 127.0.0.1:5432:5432 postgres:17-alpine
+export DATABASE_URL="postgres://postgres:$POSTGRES_PASSWORD@localhost:5432/tapecraft"
+until docker exec tape-craft-db pg_isready -h 127.0.0.1 -U postgres; do sleep 1; done
+```
+
+Then run `npm run migrate` and `npm start` as above.
+
+### Project structure
+
+The stack and architecture are recorded in [ADR 0001](docs/adr/0001-stack-and-architecture.md): vertical slices around a pure domain.
+
+| Path | What lives there |
+| --- | --- |
+| `src/TapeCraft.Domain/` | Entities and playlist rules, in plain C# |
+| `src/TapeCraft.Api/Features/` | One folder per use case, such as `Health/` |
+| `src/TapeCraft.Api/Infrastructure/` | Database access (EF Core) and, later, the Spotify client |
+| `src/TapeCraft.Api/Web/` | Cross-cutting HTTP concerns, such as security headers |
+| `web/` | React and TypeScript frontend; `web/src/features/` uses the same feature names |
+| `tests/` | Backend unit and integration tests, and Playwright tests in `tests/e2e/` |
+
+Architecture tests fail the build when the domain uses a framework, or one feature uses another.
+
+To change the database schema, edit the entities, then run `dotnet ef migrations add <Name> --project src/TapeCraft.Api --output-dir Infrastructure/Persistence/Migrations` (after `dotnet tool restore`).
+
+### Configuration
+
+All configuration comes from environment variables. Never commit credentials.
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | yes | | PostgreSQL URL, `postgres://user:password@host:port/database`; `sslmode` (for example `?sslmode=require`) is the only query parameter accepted |
+| `PORT` | no | `3000` | Port to listen on |
+| `HOST` | no | `127.0.0.1` (`0.0.0.0` in the container image) | IP address to listen on; `localhost` means `127.0.0.1` |
+
+### Health check
+
+`GET /healthz` answers within 3 seconds: 200 when the database is reachable, 503 when it is not.
+
+### Tests
+
+| Command | Runs | Needs |
+| --- | --- | --- |
+| `npm test` | frontend tests (Vitest), then backend unit and architecture tests (xUnit) | |
+| `npm run test:integration` | migrations, health check, shutdown and the container image, against a throwaway PostgreSQL | Docker |
+| `npm run test:e2e` | landing page, installability and offline page in Chromium, against the published app | the .NET SDK, and `npx playwright install chromium` once |
+
+### Container
+
+One image runs both the migrations and the app. With `DATABASE_URL` set to an address the container can reach:
+
+```sh
+docker build -t tape-craft .
+docker run --rm -e DATABASE_URL tape-craft migrate
+docker run --rm -e DATABASE_URL -p 3000:3000 tape-craft
+```
+
+Chrome offers installation only over HTTPS or on `localhost`, so a deployed app needs HTTPS.
+
 ## Data
 
 Spotify OAuth access and refresh tokens per user; Liked Songs metadata (track, album and artist IDs and names, genres, audio features); playlists the app creates in the user's Spotify account.
@@ -72,9 +147,9 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph system["tape-craft"]
-  c0["tape-craft: javascript"]
+  c0["tape-craft: ASP.NET Core, React"]
   end
-  store["Data store"]
+  store[("PostgreSQL")]
   c0 --> store
 ```
 

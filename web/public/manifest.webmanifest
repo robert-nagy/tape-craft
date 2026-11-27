@@ -1,0 +1,16 @@
+{
+  "name": "tape-craft",
+  "short_name": "tape-craft",
+  "description": "Playlists crafted from your Spotify Liked Songs.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1f1d2b",
+  "theme_color": "#1f1d2b",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

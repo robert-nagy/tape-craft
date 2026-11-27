@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TapeCraft.Domain\TapeCraft.Domain.csproj" />
+  </ItemGroup>
+
+  <!-- The React frontend in web/ builds into wwwroot. Pass -p:SkipFrontend=true when wwwroot is already built (the container image does). -->
+  <PropertyGroup>
+    <FrontendDir>$(MSBuildProjectDirectory)/../../web</FrontendDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrontendInput Include="$(FrontendDir)/src/**;$(FrontendDir)/public/**;$(FrontendDir)/index.html;$(FrontendDir)/package.json;$(FrontendDir)/vite.config.ts;$(FrontendDir)/tsconfig.json" />
+  </ItemGroup>
+  <Target Name="BuildFrontend" BeforeTargets="BeforeBuild" Condition="'$(SkipFrontend)' != 'true'" Inputs="@(FrontendInput)" Outputs="wwwroot/index.html">
+    <Exec Command="npm run build" WorkingDirectory="$(FrontendDir)" />
+  </Target>
+</Project>

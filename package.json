@@ -3,19 +3,23 @@
   "version": "1.0.0",
   "description": "Tool using Spotify API that makes sense of your Liked Songs and crafts playlists based on your needs.",
   "scripts": {
-    "test": "vitest run --passWithNoTests --exclude 'tests/integration/**' --exclude 'tests/e2e/**' --exclude 'node_modules/**'",
-    "test:integration": "vitest run --passWithNoTests --dir tests/integration",
-    "test:e2e": "playwright test --pass-with-no-tests"
+    "build": "dotnet build",
+    "start": "dotnet run --project src/TapeCraft.Api",
+    "migrate": "dotnet run --project src/TapeCraft.Api -- migrate",
+    "test": "npm test --workspace web && dotnet test --project tests/TapeCraft.UnitTests",
+    "test:integration": "dotnet test --project tests/TapeCraft.IntegrationTests",
+    "test:e2e": "playwright test"
   },
   "keywords": [],
-  "type": "commonjs",
+  "type": "module",
   "private": true,
   "devDependencies": {
-    "@playwright/test": "^1.65.1",
-    "testcontainers": "^12.2.2",
-    "vitest": "^5.1.2"
+    "@playwright/test": "^1.65.1"
   },
   "engines": {
-    "node": ">=22"
-  }
+    "node": ">=22.22"
+  },
+  "workspaces": [
+    "web"
+  ]
 }

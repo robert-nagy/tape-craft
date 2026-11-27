@@ -42,6 +42,17 @@ catch (AppConfigException error)
 
 if (migrating) return await app.Services.MigrateDatabaseAsync(Console.Out, Console.Error);
 
+// Load or create the key ring now, so that an unusable DATA_PROTECTION_KEYS_DIR stops the app instead of every sign-in.
+try
+{
+    app.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("TapeCraft.StartupCheck").Protect("ok");
+}
+catch (Exception error)
+{
+    await Console.Error.WriteLineAsync($"DATA_PROTECTION_KEYS_DIR cannot hold the key ring: {error.Message}");
+    return 1;
+}
+
 app.Urls.Add($"http://{(config.Host.Contains(':') ? $"[{config.Host}]" : config.Host)}:{config.Port}");
 app.UseSecurityHeaders();
 app.UseDefaultFiles();

@@ -44,7 +44,7 @@ Checking `state` before `error` means a forged "denied" callback is also refused
 
 **Token encryption.** An EF Core value converter protects `access_token` and `refresh_token` with the Data Protection purpose `TapeCraft.Tokens` on write and unprotects them on read. The domain keeps plain values in memory. The key ring is stored on disk in `DATA_PROTECTION_KEYS_DIR` with application name `tape-craft`, as ADR 0001 asks, so a redeploy neither signs listeners out nor makes the stored tokens unreadable. The directory has to be outside the repository and the container image.
 
-**Configuration** is validated when the web server starts, not for `migrate`, so migrations need no Spotify settings.
+**Configuration** is validated when the web server starts, not for `migrate`, so migrations need no Spotify settings. The web server also loads or creates the key ring at start-up, so an unusable `DATA_PROTECTION_KEYS_DIR` stops it with a message instead of failing every sign-in. A plain `http` redirect URI must point to `127.0.0.1` or `[::1]`, because Spotify does not accept `localhost`.
 
 **Frontend.** The landing page fetches `/api/session`. Signed out, it shows a "Sign in with Spotify" link to `/auth/spotify/sign-in`. Signed in, it shows "Signed in as <name>". `?signin=denied` and `?signin=failed` show a fixed message; the page never displays text from the URL.
 
@@ -70,7 +70,7 @@ Both tables are empty before this change, so the migration needs no backfill.
 ## Test plan
 
 - Unit (`npm test`): domain rules for `User` and `Token`; PKCE verifier length and S256 challenge; the authorize URL with exactly the four scopes; `SignInConfig` validation; the token converter (ciphertext differs from the plain value and round-trips). Through `WebApplicationFactory` with a fake `ISpotify` and `ISignInStore`: AC-1 redirect and attempt cookie attributes; AC-2 exchange with the stored verifier, session created, `/api/session` signed in; AC-3 a wrong, missing or cookie-less state makes no Spotify call and stores nothing; AC-4 a denied callback stores nothing and sets no session; AC-5 session cookie attributes and no token in the cookie value; a failing exchange. Frontend: the sign-in link, the signed-in name, and both error messages.
-- Integration (`npm run test:integration`, Docker): the migration creates the new columns and the unique indexes; AC-6 a sign-in through the real app and PostgreSQL stores tokens whose raw column values are not the tokens, and a second sign-in updates the same rows; tokens remain readable by a new app instance using the same key directory; the container image starts with the new variables.
+- Integration (`npm run test:integration`, Docker): the migration creates the new columns and the unique indexes; AC-6 a sign-in through the real app and PostgreSQL stores tokens whose raw column values are not the tokens, and a second sign-in updates the same rows; tokens remain readable by a new app instance using the same key directory; the web server refuses to start without a sign-in setting or with an unusable key directory; the container image starts with the new variables and writes its key ring to `/keys`.
 - E2E (`npm run test:e2e`): AC-1 in Chromium, with Spotify's authorize page intercepted: the scopes, S256 challenge and state; AC-3 and AC-4 in the browser: the error message is shown and no session cookie exists. A full successful sign-in needs a real Spotify account, so AC-2, AC-5 and AC-6 are covered by unit and integration tests with a fake Spotify.
 
 ## Rollout and rollback
@@ -84,7 +84,7 @@ Nothing is deployed yet. Before deploying, register a Spotify app (Development M
 - **Sign-in state in a cookie, not a server session store.** An encrypted, time-limited cookie needs no new store and survives a restart. Session middleware with a memory cache was rejected because it would lose sign-ins in progress on restart and adds a second session cookie.
 - **Concurrent first sign-ins of the same Spotify user** can violate the unique index; the second one sees "sign-in failed" and can retry.
 - **Secure cookies over plain HTTP** are accepted by browsers only on `localhost` and `127.0.0.1`. A deployed app needs HTTPS, as the README already says for installation.
-- **EF Core model caching.** The converter captures the Data Protection provider of the first context built in a process. In production there is only one provider; tests that start several apps in one process share the first one's keys.
+- **EF Core model caching.** EF Core builds the model, and so the token converter, once per cache key. `ProtectionModelCacheKeyFactory` adds the Data Protection provider to the key, so every key ring gets its own converter. Production has one provider; the cache grows only in processes that create many, as the tests do.
 
 ## Open questions
 

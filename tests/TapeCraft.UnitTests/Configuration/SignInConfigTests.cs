@@ -37,7 +37,8 @@ public sealed class SignInConfigTests
     [InlineData(null, "SPOTIFY_REDIRECT_URI is required")]
     [InlineData("/auth/spotify/callback", "SPOTIFY_REDIRECT_URI must be an absolute http or https URL")]
     [InlineData("ftp://example.com/auth/spotify/callback", "SPOTIFY_REDIRECT_URI must be an absolute http or https URL")]
-    [InlineData("http://example.com/auth/spotify/callback", "SPOTIFY_REDIRECT_URI must use https unless it points to 127.0.0.1, [::1] or localhost")]
+    [InlineData("http://example.com/auth/spotify/callback", "SPOTIFY_REDIRECT_URI must use https unless it points to 127.0.0.1 or [::1]")]
+    [InlineData("http://localhost:3000/auth/spotify/callback", "SPOTIFY_REDIRECT_URI must use https unless it points to 127.0.0.1 or [::1]")]
     [InlineData("https://example.com/somewhere-else", "SPOTIFY_REDIRECT_URI must end with /auth/spotify/callback")]
     [InlineData("https://example.com/auth/spotify/callback?x=1", "SPOTIFY_REDIRECT_URI must not have a query or fragment")]
     public void Explains_a_bad_redirect_uri(string? value, string message) =>
@@ -45,7 +46,7 @@ public sealed class SignInConfigTests
 
     [Theory]
     [InlineData("https://tape-craft.example/auth/spotify/callback")]
-    [InlineData("http://localhost:3000/auth/spotify/callback")]
+    [InlineData("http://127.0.0.1:3000/auth/spotify/callback")]
     [InlineData("http://[::1]:3000/auth/spotify/callback")]
     public void Accepts_https_and_loopback_redirect_uris(string value) => Assert.Equal(new Uri(value), Load(redirectUri: value).RedirectUri);
 

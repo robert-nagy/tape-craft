@@ -33,7 +33,7 @@ npm run migrate
 npm start
 ```
 
-`npm start` builds the React frontend and runs the backend (`dotnet run --project src/TapeCraft.Api`). Then open <http://127.0.0.1:3000>, the address the redirect URI names, so that the browser keeps the sign-in cookie. In Google Chrome, use the install button in the address bar to add tape-craft as an app. While working on the frontend, `npm run dev --workspace web` serves it with hot reload on <http://localhost:5173>.
+`npm start` builds the React frontend and runs the backend (`dotnet run --project src/TapeCraft.Api`). Then open <http://127.0.0.1:3000>, the address the redirect URI names, so that the browser keeps the sign-in cookie. In Google Chrome, use the install button in the address bar to add tape-craft as an app. While working on the frontend, `npm run dev --workspace web` serves it with hot reload on <http://localhost:5173>. Sign-in does not work there: Spotify returns to `SPOTIFY_REDIRECT_URI` on port 3000, where the browser has no sign-in cookie. Try signing in on <http://127.0.0.1:3000>.
 
 For a throwaway local database:
 
@@ -73,7 +73,7 @@ All configuration comes from environment variables. Never commit credentials.
 | `PORT` | no | `3000` | Port to listen on |
 | `HOST` | no | `127.0.0.1` (`0.0.0.0` in the container image) | IP address to listen on; `localhost` means `127.0.0.1` |
 | `SPOTIFY_CLIENT_ID` | yes, for the web server | | Client ID of the Spotify app. No client secret is needed: sign-in uses PKCE |
-| `SPOTIFY_REDIRECT_URI` | yes, for the web server | | The address Spotify returns to, ending in `/auth/spotify/callback`; `https`, or `http` on `127.0.0.1`, `[::1]` or `localhost`. It must match a redirect URI of the Spotify app exactly |
+| `SPOTIFY_REDIRECT_URI` | yes, for the web server | | The address Spotify returns to, ending in `/auth/spotify/callback`; `https`, or `http` on `127.0.0.1` or `[::1]` (Spotify does not accept `localhost`). It must match a redirect URI of the Spotify app exactly |
 | `DATA_PROTECTION_KEYS_DIR` | yes, for the web server | | Absolute path of the folder for the key ring that encrypts sessions and stored Spotify tokens. Keep it outside the repository and the container, readable only by the app, and back it up: losing it signs everyone out and makes stored tokens unreadable |
 
 `npm run migrate` (and `migrate` in the container) needs only `DATABASE_URL`.

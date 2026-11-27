@@ -100,6 +100,22 @@ public sealed class UnreachableDatabaseTests : IAsyncLifetime
         Assert.Contains(message, app.Output);
     }
 
+    [Fact]
+    public async Task The_web_server_does_not_start_when_it_cannot_write_the_key_ring()
+    {
+        var file = Path.GetTempFileName(); // A file, so no folder can be created at this path.
+        try
+        {
+            await using var app = AppProcess.Start("postgres://127.0.0.1:1/tapecraft", 0, new Dictionary<string, string?> { ["DATA_PROTECTION_KEYS_DIR"] = file });
+            Assert.Equal(1, await app.WaitForExitAsync(TimeSpan.FromSeconds(30)));
+            Assert.Contains("DATA_PROTECTION_KEYS_DIR cannot hold the key ring", app.Output);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
     private static async Task WaitUntil(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

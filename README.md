@@ -68,7 +68,7 @@ All configuration comes from environment variables. Never commit credentials.
 | --- | --- | --- | --- |
 | `DATABASE_URL` | yes | | PostgreSQL URL, `postgres://user:password@host:port/database`; `sslmode` (for example `?sslmode=require`) is the only query parameter accepted |
 | `PORT` | no | `3000` | Port to listen on |
-| `HOST` | no | `127.0.0.1` (`0.0.0.0` in the container image) | Address to listen on |
+| `HOST` | no | `127.0.0.1` (`0.0.0.0` in the container image) | IP address to listen on; `localhost` means `127.0.0.1` |
 
 ### Health check
 

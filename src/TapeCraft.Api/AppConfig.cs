@@ -1,3 +1,4 @@
+using System.Net;
 using Npgsql;
 
 namespace TapeCraft.Api;
@@ -59,9 +60,10 @@ public sealed record AppConfig(string ConnectionString, int Port, string Host)
         value = value?.Trim();
         // Kestrel listens on two addresses for "localhost"; one address is simpler to reason about.
         if (string.IsNullOrEmpty(value) || value == "localhost") return "127.0.0.1";
-        if (Uri.CheckHostName(value) == UriHostNameType.Unknown)
-            throw new AppConfigException("HOST must be an IP address or a host name");
-        return value;
+        // Kestrel listens on every interface for any other host name, so accept addresses only.
+        if (!IPAddress.TryParse(value.Trim('[', ']'), out var address))
+            throw new AppConfigException("HOST must be an IP address, such as 127.0.0.1 or 0.0.0.0");
+        return address.ToString();
     }
 }
 

@@ -81,15 +81,16 @@ public sealed class AppConfigTests
     [InlineData("my host")]
     [InlineData("a/b")]
     [InlineData("http://0.0.0.0")]
+    [InlineData("app.internal")]
     public void Rejects_a_bad_host(string value) =>
-        Assert.Equal("HOST must be an IP address or a host name",
+        Assert.Equal("HOST must be an IP address, such as 127.0.0.1 or 0.0.0.0",
             Assert.Throws<AppConfigException>(() => Load(host: value)).Message);
 
     [Theory]
     [InlineData("::", "::")]
     [InlineData(" 0.0.0.0 ", "0.0.0.0")]
-    [InlineData("app.internal", "app.internal")]
-    public void Accepts_addresses_and_host_names(string value, string expected) =>
+    [InlineData("[::1]", "::1")]
+    public void Accepts_addresses(string value, string expected) =>
         Assert.Equal(expected, Load(host: value).Host);
 
     [Theory]

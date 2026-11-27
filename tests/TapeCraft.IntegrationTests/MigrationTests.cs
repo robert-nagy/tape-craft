@@ -42,12 +42,24 @@ public sealed class MigrationTests : IAsyncLifetime
 
         var first = await Migrate();
         Assert.True(first.Code == 0, first.Output);
-        Assert.Contains("Applied 1 migration(s)", first.Output);
+        Assert.Contains("Applied 2 migration(s)", first.Output);
         Assert.DoesNotContain("fail", first.Output, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("warn", first.Output, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(Tables, await PublicTables());
-        foreach (var table in Tables)
+        foreach (var table in new[] { "analysis", "playlists", "tracks" })
             Assert.Equal(["id|uuid"], await Query($"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table}'"));
+        Assert.Equal(
+            ["created_at|timestamp with time zone|NO", "display_name|text|YES", "id|uuid|NO", "spotify_user_id|text|NO"],
+            await Query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'users' ORDER BY 1"));
+        Assert.Equal(
+            ["access_token|text|NO", "expires_at|timestamp with time zone|NO", "id|uuid|NO", "refresh_token|text|NO", "user_id|uuid|NO"],
+            await Query("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'tokens' ORDER BY 1"));
+        Assert.Equal(
+            ["tokens|ix_tokens_user_id", "users|ix_users_spotify_user_id"],
+            await Query("SELECT tablename, indexname FROM pg_indexes WHERE schemaname = 'public' AND indexdef LIKE 'CREATE UNIQUE INDEX ix_%' ORDER BY 1"));
+        Assert.Equal(
+            ["fk_tokens_users_user_id|c"],
+            await Query("SELECT conname, confdeltype FROM pg_constraint WHERE contype = 'f'"));
 
         var snapshot = await Query("SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' ORDER BY 1, 2");
         var history = await Query("SELECT * FROM \"__EFMigrationsHistory\"");

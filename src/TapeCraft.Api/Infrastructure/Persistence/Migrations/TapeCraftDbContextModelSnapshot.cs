@@ -55,8 +55,30 @@ namespace TapeCraft.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("access_token");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("refresh_token");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
                     b.HasKey("Id")
                         .HasName("pk_tokens");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tokens_user_id");
 
                     b.ToTable("tokens", (string)null);
                 });
@@ -81,10 +103,37 @@ namespace TapeCraft.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("text")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("SpotifyUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("spotify_user_id");
+
                     b.HasKey("Id")
                         .HasName("pk_users");
 
+                    b.HasIndex("SpotifyUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_spotify_user_id");
+
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("TapeCraft.Domain.Token", b =>
+                {
+                    b.HasOne("TapeCraft.Domain.User", null)
+                        .WithOne()
+                        .HasForeignKey("TapeCraft.Domain.Token", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tokens_users_user_id");
                 });
 #pragma warning restore 612, 618
         }

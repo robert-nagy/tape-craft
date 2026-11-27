@@ -89,6 +89,33 @@ public sealed class UnreachableDatabaseTests : IAsyncLifetime
         Assert.DoesNotContain("hunter2", app.Output);
     }
 
+    [Theory]
+    [InlineData("SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_ID is required")]
+    [InlineData("SPOTIFY_REDIRECT_URI", "SPOTIFY_REDIRECT_URI is required")]
+    [InlineData("DATA_PROTECTION_KEYS_DIR", "DATA_PROTECTION_KEYS_DIR is required")]
+    public async Task The_web_server_does_not_start_without_a_sign_in_setting(string name, string message)
+    {
+        await using var app = AppProcess.Start("postgres://127.0.0.1:1/tapecraft", 0, new Dictionary<string, string?> { [name] = null });
+        Assert.Equal(1, await app.WaitForExitAsync(TimeSpan.FromSeconds(30)));
+        Assert.Contains(message, app.Output);
+    }
+
+    [Fact]
+    public async Task The_web_server_does_not_start_when_it_cannot_write_the_key_ring()
+    {
+        var file = Path.GetTempFileName(); // A file, so no folder can be created at this path.
+        try
+        {
+            await using var app = AppProcess.Start("postgres://127.0.0.1:1/tapecraft", 0, new Dictionary<string, string?> { ["DATA_PROTECTION_KEYS_DIR"] = file });
+            Assert.Equal(1, await app.WaitForExitAsync(TimeSpan.FromSeconds(30)));
+            Assert.Contains("DATA_PROTECTION_KEYS_DIR cannot hold the key ring", app.Output);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
     private static async Task WaitUntil(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

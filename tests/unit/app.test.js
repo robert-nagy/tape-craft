@@ -1,3 +1,5 @@
+import net from 'node:net';
+import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../../src/app.js';
 
@@ -63,6 +65,33 @@ describe('a malformed URL', () => {
     const response = await build().inject({ url: '/%E0%A4%A' });
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({ error: 'Bad Request' });
+  });
+});
+
+describe('while closing', () => {
+  it('still answers a request normally, with the security headers', async () => {
+    const answers = [];
+    await build(() => new Promise((resolve) => answers.push(resolve))).listen({ port: 0, host: '127.0.0.1' });
+    const socket = net.connect(app.server.address().port, '127.0.0.1');
+    let received = '';
+    socket.on('data', (chunk) => (received += chunk));
+    const ended = new Promise((resolve) => socket.once('close', resolve));
+    const get = (path) => socket.write(`GET ${path} HTTP/1.1\r\nHost: localhost\r\n\r\n`);
+
+    // The first request keeps the connection busy while the app starts to close.
+    get('/healthz');
+    await vi.waitFor(() => expect(answers).toHaveLength(1));
+    const closed = app.close();
+    await delay(50);
+    get('/healthz');
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+    answers.forEach((answer) => answer(true));
+    await vi.waitFor(() => expect(received.match(/"status":"ok"/g)).toHaveLength(2));
+    socket.destroy();
+    await Promise.all([ended, closed]);
+
+    expect(received.match(/HTTP\/1\.1 200 OK/g)).toHaveLength(2);
+    expect(received.match(/^x-content-type-options: nosniff/gm)).toHaveLength(2);
   });
 });
 

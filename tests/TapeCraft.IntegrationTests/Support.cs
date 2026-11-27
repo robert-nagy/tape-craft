@@ -39,13 +39,38 @@ public static class Postgres
     }
 }
 
-/// <summary>The real app in memory, against the database at <paramref name="databaseUrl"/>.</summary>
-public sealed class AppFactory(string databaseUrl) : WebApplicationFactory<Program>
+/// <summary>The settings the web server needs for sign-in. The key ring goes to <paramref name="keysDirectory"/>.</summary>
+public static class SignInSettings
 {
+    public static Dictionary<string, string> For(string keysDirectory) => new()
+    {
+        ["SPOTIFY_CLIENT_ID"] = "testclientid0123",
+        ["SPOTIFY_REDIRECT_URI"] = "http://127.0.0.1:3000/auth/spotify/callback",
+        ["DATA_PROTECTION_KEYS_DIR"] = keysDirectory,
+    };
+}
+
+/// <summary>
+/// The real app in memory, against the database at <paramref name="databaseUrl"/>, with its key ring in
+/// <paramref name="keysDirectory"/> (a new temporary folder when null).
+/// </summary>
+public sealed class AppFactory(string databaseUrl, string? keysDirectory = null) : WebApplicationFactory<Program>
+{
+    private readonly string? _ownKeys = keysDirectory is null ? Directory.CreateTempSubdirectory("tape-craft-keys-").FullName : null;
+
+    public string KeysDirectory => keysDirectory ?? _ownKeys!;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("DATABASE_URL", databaseUrl);
+        foreach (var (name, value) in SignInSettings.For(KeysDirectory)) builder.UseSetting(name, value);
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        if (_ownKeys is not null) Directory.Delete(_ownKeys, recursive: true);
     }
 }
 
@@ -55,6 +80,7 @@ public sealed class AppProcess : IAsyncDisposable
     private static readonly string Dll = Path.Combine(AppContext.BaseDirectory, "TapeCraft.Api.dll");
     private readonly Process _process;
     private readonly StringBuilder _output = new();
+    private string? _keys;
 
     private AppProcess(Process process)
     {
@@ -71,7 +97,10 @@ public sealed class AppProcess : IAsyncDisposable
 
     public string Url => $"http://127.0.0.1:{Port}";
 
-    public static AppProcess Start(string databaseUrl, int? port = null, params string[] args)
+    public static AppProcess Start(string databaseUrl, int? port = null, params string[] args) => Start(databaseUrl, port, null, args);
+
+    /// <summary>Starts the app with <paramref name="environment"/> applied last; a null value removes a variable.</summary>
+    public static AppProcess Start(string databaseUrl, int? port, IReadOnlyDictionary<string, string?>? environment, params string[] args)
     {
         var info = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = Path.Combine(Repo.Root, "src", "TapeCraft.Api") };
         info.ArgumentList.Add(Dll);
@@ -80,7 +109,19 @@ public sealed class AppProcess : IAsyncDisposable
         info.Environment["PORT"] = port?.ToString() ?? "0";
         info.Environment["HOST"] = "127.0.0.1";
         info.Environment["ASPNETCORE_ENVIRONMENT"] = "Production";
-        return new AppProcess(Process.Start(info)!) { Port = port };
+        // Only the web server needs the sign-in settings, so `migrate` runs without them, as in production.
+        string? keys = null;
+        if (args.Length == 0)
+        {
+            keys = Directory.CreateTempSubdirectory("tape-craft-keys-").FullName;
+            foreach (var (name, value) in SignInSettings.For(keys)) info.Environment[name] = value;
+        }
+        foreach (var (name, value) in environment ?? new Dictionary<string, string?>())
+        {
+            if (value is null) info.Environment.Remove(name);
+            else info.Environment[name] = value;
+        }
+        return new AppProcess(Process.Start(info)!) { Port = port, _keys = keys };
     }
 
     /// <summary>Starts the web server and waits until it answers.</summary>
@@ -119,5 +160,6 @@ public sealed class AppProcess : IAsyncDisposable
         if (!_process.HasExited) _process.Kill();
         await _process.WaitForExitAsync();
         _process.Dispose();
+        if (_keys is not null) Directory.Delete(_keys, recursive: true);
     }
 }

@@ -22,6 +22,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
 WORKDIR /app
 ENV HOST=0.0.0.0 PORT=3000
 COPY --from=api /app .
+# Mount a volume here for DATA_PROTECTION_KEYS_DIR. A new named volume takes this folder's owner, the app user.
+RUN mkdir /keys && chown "$APP_UID" /keys && chmod 700 /keys
 USER $APP_UID
 EXPOSE 3000
 # Run the migrations with the same image: docker run ... tape-craft migrate

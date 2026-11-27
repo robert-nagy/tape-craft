@@ -89,6 +89,17 @@ public sealed class UnreachableDatabaseTests : IAsyncLifetime
         Assert.DoesNotContain("hunter2", app.Output);
     }
 
+    [Theory]
+    [InlineData("SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_ID is required")]
+    [InlineData("SPOTIFY_REDIRECT_URI", "SPOTIFY_REDIRECT_URI is required")]
+    [InlineData("DATA_PROTECTION_KEYS_DIR", "DATA_PROTECTION_KEYS_DIR is required")]
+    public async Task The_web_server_does_not_start_without_a_sign_in_setting(string name, string message)
+    {
+        await using var app = AppProcess.Start("postgres://127.0.0.1:1/tapecraft", 0, new Dictionary<string, string?> { [name] = null });
+        Assert.Equal(1, await app.WaitForExitAsync(TimeSpan.FromSeconds(30)));
+        Assert.Contains(message, app.Output);
+    }
+
     private static async Task WaitUntil(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);

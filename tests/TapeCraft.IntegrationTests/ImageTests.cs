@@ -42,6 +42,8 @@ public sealed class ImageTests : IAsyncLifetime
     {
         var builder = new ContainerBuilder(_image).WithNetwork(_network).WithEnvironment("DATABASE_URL", DatabaseUrl);
         if (command.Length > 0) builder = builder.WithCommand(command);
+        // Only the web server needs the sign-in settings. /keys is where the README mounts the key volume.
+        else foreach (var (name, value) in SignInSettings.For("/keys")) builder = builder.WithEnvironment(name, value);
         var container = builder
             .WithPortBinding(3000, assignRandomHostPort: true)
             .WithWaitStrategy(command.Length > 0
@@ -62,8 +64,18 @@ public sealed class ImageTests : IAsyncLifetime
 
         var app = Container();
         await app.StartAsync(cancellation);
-        using var client = new HttpClient { BaseAddress = new Uri($"http://{app.Hostname}:{app.GetMappedPublicPort(3000)}") };
+        using var client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
+        {
+            BaseAddress = new Uri($"http://{app.Hostname}:{app.GetMappedPublicPort(3000)}"),
+        };
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/", cancellation)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/healthz", cancellation)).StatusCode);
+
+        // Signing in writes the key ring, so the app user must be able to write to /keys.
+        var signIn = await client.GetAsync("/auth/spotify/sign-in", cancellation);
+        Assert.Equal(HttpStatusCode.Redirect, signIn.StatusCode);
+        var keys = await app.ExecAsync(["ls", "/keys"], cancellation);
+        Assert.Equal(0, keys.ExitCode);
+        Assert.StartsWith("key-", keys.Stdout);
     }
 }

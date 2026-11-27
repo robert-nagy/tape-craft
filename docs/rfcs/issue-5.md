@@ -54,8 +54,8 @@ The first migration creates `users`, `tokens`, `tracks`, `analysis` and `playlis
 
 ## Test plan
 
-- Unit: configuration validation, health check success, failure and deadline, routes and headers through `app.inject`, manifest and icon sizes, service worker behaviour.
-- Integration (testcontainers, needs Docker): migrations on an empty database and a second run, `/healthz` 200 with the database up and 503 after it stops, the 3 s limit against a server that never answers, `npm start` serving `/`, and the container image running migrations and the server.
+- Unit: configuration validation, health check success, failure and deadline, routes and headers through `app.inject`, a request that arrives during shutdown, error messages, manifest and icon sizes, service worker behaviour.
+- Integration (testcontainers, needs Docker): migrations on an empty database and a second run, `/healthz` 200 with the database up and 503 after it stops, the 3 s limit against a server that never answers, shutdown with a request in progress, a failing migration, `npm start` serving `/`, and the container image running migrations and the server.
 - E2E (Playwright, Chromium): landing page, no installability errors reported by Chrome, service worker control, offline page after the server process is stopped.
 
 ## Rollout and rollback

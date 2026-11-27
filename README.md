@@ -19,6 +19,64 @@ A Spotify user's Liked Songs grows into one huge unsorted list. Sorting it into 
 - Save the playlist to the user's Spotify account.
 - Revisit and regenerate saved playlists.
 
+## Getting started
+
+You need Node.js 22 or later (22.22 or later to run the tests) and a PostgreSQL database.
+
+```sh
+npm ci
+export DATABASE_URL='postgres://USER:PASSWORD@localhost:5432/tapecraft'
+npm run migrate
+npm start
+```
+
+Then open <http://localhost:3000>. In Google Chrome, use the install button in the address bar to add tape-craft as an app.
+
+For a throwaway local database:
+
+```sh
+export POSTGRES_PASSWORD="$(openssl rand -hex 16)"
+docker run --rm -d --name tape-craft-db -e POSTGRES_PASSWORD -e POSTGRES_DB=tapecraft -p 127.0.0.1:5432:5432 postgres:17-alpine
+export DATABASE_URL="postgres://postgres:$POSTGRES_PASSWORD@localhost:5432/tapecraft"
+until docker exec tape-craft-db pg_isready -h 127.0.0.1 -U postgres; do sleep 1; done
+```
+
+Then run `npm run migrate` and `npm start` as above.
+
+### Configuration
+
+All configuration comes from environment variables. Never commit credentials.
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | yes | | PostgreSQL connection string |
+| `PORT` | no | `3000` | Port to listen on |
+| `HOST` | no | `127.0.0.1` (`0.0.0.0` in the container image) | Address to listen on |
+
+### Health check
+
+`GET /healthz` answers within 3 seconds: 200 when the database is reachable, 503 when it is not.
+
+### Tests
+
+| Command | Runs | Needs |
+| --- | --- | --- |
+| `npm test` | unit tests | |
+| `npm run test:integration` | migrations, health check and container image against a throwaway PostgreSQL | Docker |
+| `npm run test:e2e` | landing page, installability and offline page in Chromium | `npx playwright install chromium`, once |
+
+### Container
+
+One image runs both the migrations and the app. With `DATABASE_URL` set to an address the container can reach:
+
+```sh
+docker build -t tape-craft .
+docker run --rm -e DATABASE_URL tape-craft node src/migrate.js
+docker run --rm -e DATABASE_URL -p 3000:3000 tape-craft
+```
+
+Chrome offers installation only over HTTPS or on `localhost`, so a deployed app needs HTTPS.
+
 ## Data
 
 Spotify OAuth access and refresh tokens per user; Liked Songs metadata (track, album and artist IDs and names, genres, audio features); playlists the app creates in the user's Spotify account.
@@ -72,9 +130,9 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph system["tape-craft"]
-  c0["tape-craft: javascript"]
+  c0["tape-craft: Node.js, Fastify"]
   end
-  store["Data store"]
+  store[("PostgreSQL")]
   c0 --> store
 ```
 

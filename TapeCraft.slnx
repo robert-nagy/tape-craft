@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TapeCraft.Api/TapeCraft.Api.csproj" />
+    <Project Path="src/TapeCraft.Domain/TapeCraft.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TapeCraft.IntegrationTests/TapeCraft.IntegrationTests.csproj" />
+    <Project Path="tests/TapeCraft.UnitTests/TapeCraft.UnitTests.csproj" />
+  </Folder>
+</Solution>

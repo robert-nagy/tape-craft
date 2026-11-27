@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Plain C# only: no package or framework references (ADR 0001). -->
+</Project>

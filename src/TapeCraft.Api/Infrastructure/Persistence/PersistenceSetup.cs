@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Npgsql;
 
 namespace TapeCraft.Api.Infrastructure.Persistence;
@@ -10,12 +11,14 @@ public static class PersistenceSetup
         services.AddSingleton(provider => NpgsqlDataSource.Create(provider.GetRequiredService<AppConfig>().ConnectionString));
         services.AddDbContext<TapeCraftDbContext>((provider, options) => Configure(options, provider.GetRequiredService<NpgsqlDataSource>()));
         services.AddSingleton<IDatabaseProbe, NpgsqlDatabaseProbe>();
+        services.AddScoped<ISignInStore, EfSignInStore>();
         services.AddSingleton(TimeProvider.System);
         return services;
     }
 
-    internal static DbContextOptionsBuilder Configure(DbContextOptionsBuilder options, NpgsqlDataSource dataSource) =>
-        options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention();
+    public static DbContextOptionsBuilder Configure(DbContextOptionsBuilder options, NpgsqlDataSource dataSource) =>
+        options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention()
+            .ReplaceService<IModelCacheKeyFactory, ProtectionModelCacheKeyFactory>();
 
     /// <summary>Applies the pending migrations. Returns the process exit code.</summary>
     public static async Task<int> MigrateDatabaseAsync(this IServiceProvider services, TextWriter output, TextWriter errors)

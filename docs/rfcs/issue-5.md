@@ -4,7 +4,7 @@
 
 ## Summary
 
-Add the first runnable application: a Fastify web server in plain JavaScript (Node 22, ES modules) with a public landing page, a `/healthz` endpoint backed by PostgreSQL, SQL migrations, an installable Progressive Web App shell with an offline page, unit, integration and E2E tests, and one container image.
+Add the first runnable application, following ADR 0001: an ASP.NET Core backend on .NET 10 with a pure domain project, EF Core migrations for PostgreSQL, a `/healthz` endpoint, a React and TypeScript landing page that installs as a Progressive Web App with an offline page, tests on every tier, and one container image.
 
 ## Motivation
 
@@ -12,31 +12,32 @@ The repository has tooling but no application code (issue #5). Spotify sign-in, 
 
 ## Detailed design
 
-**Stack.** JavaScript, matching the existing Node tooling and `.sentinel/domain.json`, so no build step is needed. `package.json` moves to `"type": "module"`. Runtime dependencies: `fastify`, `@fastify/static`, `pg`, `node-pg-migrate`.
+Layout and rules: `docs/adr/0001-stack-and-architecture.md`.
 
-| File | Responsibility |
+| Path | Responsibility |
 | --- | --- |
-| `src/config.js` | Read and validate environment variables. Fail fast with a message that never echoes a value. |
-| `src/db.js` | Create the `pg` pool with short timeouts and handle idle-client errors. |
-| `src/errors.js` | Turn an error into a log message, including Node's message-less `AggregateError`. |
-| `src/health.js` | Database check with a hard deadline; concurrent calls share one check. |
-| `src/app.js` | Build the Fastify app: static files, `/healthz`, security headers. Takes the health check as an argument so it can be tested without a database. |
-| `src/server.js` | Entry point: wire the parts, listen, shut down on SIGTERM and SIGINT. Requests in progress get 5 s to finish before their connections are closed. |
-| `src/migrations.js` | Run the pending migrations. |
-| `src/migrate.js` | The `npm run migrate` command. |
-| `migrations/*.sql` | Schema migrations. |
-| `public/` | Landing page, stylesheet, web app manifest, service worker, offline page, icons. |
-| `Dockerfile`, `.dockerignore` | One image that runs the server or the migrations. |
+| `TapeCraft.slnx`, `Directory.Build.props`, `Directory.Packages.props` | Solution; nullable references and warnings as errors everywhere; package versions in one place |
+| `src/TapeCraft.Domain/` | Entities `User`, `Token`, `Track`, `Analysis`, `Playlist`, each with only an `Id` for now |
+| `src/TapeCraft.Api/Program.cs` | Entry point: `migrate` runs the migrations, anything else starts the web server |
+| `src/TapeCraft.Api/AppConfig.cs` | Reads and validates `DATABASE_URL`, `PORT` and `HOST`. Errors never include a value |
+| `src/TapeCraft.Api/Features/Health/` | `GET /healthz` |
+| `src/TapeCraft.Api/Infrastructure/Persistence/` | `TapeCraftDbContext`, migrations, the database health check |
+| `src/TapeCraft.Api/Web/` | Security headers |
+| `web/` | Vite, React and TypeScript. `npm run build` writes to `src/TapeCraft.Api/wwwroot` |
+| `web/public/` | Manifest, service worker, offline page, stylesheet, icons; served unchanged |
+| `Dockerfile` | Three stages: build the frontend with Node, publish the backend with the .NET SDK, run on the ASP.NET Core runtime image as a non-root user |
 
-**Health check.** `SELECT 1` through the pool. The connection and query timeouts are 2 s, and an outer deadline of 2.5 s guarantees an answer within the 3 s limit even if a socket hangs. `/healthz` is public, so concurrent requests share one in-flight query and cannot exhaust the pool. The response carries no error detail; the cause is logged.
+**Configuration.** `DATABASE_URL` is a `postgres://user:password@host:port/database` URL, the form hosts usually provide; `sslmode` is the only query parameter accepted. It is turned into an Npgsql connection string with a 2 s connection timeout. `PORT` defaults to 3000 and `HOST` to `127.0.0.1` (the image sets `0.0.0.0`).
 
-**Database outage.** The server starts and stays up without a database. The pool's `error` event is handled, so a database restart does not crash the process.
+**Health check.** `SELECT 1` through EF Core's data source with a 2 s command timeout and an outer deadline of 2.5 s, so the response always arrives within the 3 s limit. `/healthz` is public, so concurrent requests share one database check. The response carries no error detail and is not cached; the cause is logged.
 
-**Migrations** are a separate step (`npm run migrate`), not part of server start, so a database outage cannot stop the app from starting. `node-pg-migrate` records applied migrations and holds an advisory lock while it runs.
+**Database outage.** The server starts and keeps running without a database, because nothing connects at start-up.
 
-**PWA.** `manifest.webmanifest` declares the name, 192 px and 512 px icons, `start_url` `/` and `display: standalone`. The service worker precaches the offline page and its assets. It handles only page navigations and those assets, goes to the network first, and falls back to the cache when the request fails. It caches no application responses, so later signed-in pages are never stored.
+**Migrations** run with `dotnet TapeCraft.Api.dll migrate` (`npm run migrate` locally), not at server start. EF Core records applied migrations in `__EFMigrationsHistory` and takes a lock while migrating.
 
-**Security headers** on every response: a `default-src 'self'` Content-Security-Policy that also forbids framing, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
+**PWA.** Unchanged in behaviour from the first draft: the manifest declares the name, 192 px and 512 px icons and `display: standalone`; the service worker serves the offline page when a page navigation fails and caches nothing else.
+
+**Security headers** on every response that passes through the app: a `default-src 'self'` Content-Security-Policy that also forbids framing, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`.
 
 ## API changes
 
@@ -44,39 +45,32 @@ The repository has tooling but no application code (issue #5). Spotify sign-in, 
 | --- | --- |
 | `GET /` | 200, public landing page |
 | `GET /healthz` | 200 `{"status":"ok"}` or 503 `{"status":"unavailable"}` |
-| `GET /manifest.webmanifest`, `/sw.js`, `/offline.html`, icons, stylesheet, script | 200, static |
-
-Commands: `npm start`, `npm run migrate`. Environment variables: `DATABASE_URL` (required), `PORT` (default 3000), `HOST` (default `127.0.0.1`, which `localhost` also maps to so that there is one listener; the image sets `0.0.0.0`).
+| `GET /manifest.webmanifest`, `/sw.js`, `/offline.html`, icons, stylesheet, built scripts | 200, static |
 
 ## Data changes
 
-The first migration creates `users`, `tokens`, `tracks`, `analysis` and `playlists` with no columns, because columns are out of scope. Each feature adds its columns and keys in its own migration. `node-pg-migrate` adds its bookkeeping table `pgmigrations`.
+The first migration creates `users`, `tokens`, `tracks`, `analysis` and `playlists`, each with a `uuid` primary key `id` only. Each feature adds its columns in its own migration.
 
 ## Test plan
 
-- Unit: configuration validation, health check success, failure and deadline, routes and headers through `app.inject`, a request that arrives during shutdown, error messages, manifest and icon sizes, service worker behaviour.
-- Integration (testcontainers, needs Docker): migrations on an empty database and a second run, `/healthz` 200 with the database up and 503 after it stops, the 3 s limit against a server that never answers, shutdown with a request in progress, a failing migration, `npm start` serving `/`, and the container image running migrations and the server.
-- E2E (Playwright, Chromium): landing page, no installability errors reported by Chrome, service worker control, offline page after the server process is stopped.
+- Unit (`npm test`): configuration parsing, health check result, deadline and sharing, routes, static files, headers and the not-cached health response through `WebApplicationFactory`, the architecture rules; on the frontend the landing page, manifest, icons and service worker.
+- Integration (`npm run test:integration`, needs Docker): migrations on an empty database and a second run, `/healthz` 200 and then 503 after the database stops, the 3 s limit against a database that never answers, the `migrate` command failing without printing the password, and the container image running migrations and the server.
+- E2E (`npm run test:e2e`): landing page, no installability errors reported by Chromium, service worker control, offline page after the server process stops, and recovery.
 
 ## Rollout and rollback
 
-Nothing is deployed yet. Run `npm run migrate` before starting a new version. Rolling back is reverting the pull request; the empty tables can be dropped with the database.
+Nothing is deployed yet. Run the migrations before starting a new version. Rolling back is reverting the pull request.
 
 ## Risks and alternatives
 
-- **TypeScript:** rejected for now; it adds a build step to a repository set up for JavaScript. It can be added later.
-- **Express:** rejected; Fastify has built-in input validation, structured logging and request injection for tests.
-- **Own migration runner:** rejected; ordering, transactions and locking are already solved by `node-pg-migrate`.
-- **Migrate on server start:** rejected; it ties start-up to database availability.
-- AC-8 (own window without the address bar) is a Chrome behaviour driven by `display: standalone`. The tests check the manifest and Chrome's installability report; opening the installed app needs a manual check.
-- The offline page appears when the network request fails. A proxy in front of a stopped app that answers 502 is not covered; the hosting issue can revisit it.
+- See ADR 0001 for the stack and architecture alternatives.
+- AC-8 (own window without the address bar) follows from `display: standalone`; opening the installed app needs a manual check.
+- Kestrel answers malformed HTTP requests itself, before the app runs, so those responses carry no security headers. They contain no page content.
 
-## Open questions
+## Departures from the first draft
 
-None.
+The first draft of this pull request used JavaScript and Fastify, chosen without the maintainer. It was replaced by ADR 0001. Tables now have an `id` column, because EF Core needs a key.
 
 ## Approval
 
-Unattended run (`sentinel-sdlc-auto`): implementation proceeds without approval; review happens on the pull request.
-
-- [ ] Design reviewed and approved. Implementation does not start until this is checked.
+- [x] Stack and architecture approved by the maintainer (ADR 0001).

@@ -26,7 +26,7 @@ Follows ADR 0001: one feature folder, the outside world behind interfaces, rules
 | `src/TapeCraft.Api/Web/Session.cs` | Data Protection key ring on disk, and cookie authentication with the session cookie settings |
 | `web/src/features/sign-in/` | `SignIn` component and `fetchSession`; the landing page shows it |
 
-The feature uses `ISpotify` and `ISignInStore`, not `TapeCraftDbContext`, because the architecture tests forbid features from depending on Infrastructure classes (the same reason Health uses `IDatabaseProbe`). `ISignInStore` has one method shaped by the use case, not a general repository.
+The feature uses `ISpotify` and `ISignInStore`, not `TapeCraftDbContext`, because the architecture tests forbid features from depending on Infrastructure classes (the same reason Health uses `IDatabaseProbe`). `ISignInStore` has one method shaped by the use case, not a general repository. The maintainer approved this as the pattern for every feature (ADR 0001, rule 3).
 
 **Start (`GET /auth/spotify/sign-in`).** Generates a 32-byte random `state` and a 64-byte random code verifier (86 base64url characters), and derives the S256 challenge. It stores `{state, verifier}` in the cookie `tapecraft.signin`, protected with a time-limited Data Protection protector (10 minutes). The cookie is HttpOnly, Secure and SameSite=Lax, with path `/auth/spotify`. Then it redirects (302) to `https://accounts.spotify.com/authorize` with `client_id`, `response_type=code`, `redirect_uri`, `scope=user-library-read playlist-modify-private playlist-modify-public playlist-read-private`, `code_challenge_method=S256`, `code_challenge` and `state`.
 
@@ -79,7 +79,7 @@ Nothing is deployed yet. Before deploying, register a Spotify app (Development M
 
 ## Risks and alternatives
 
-- **Client secret.** The README's Security section says the app authenticates to Spotify with its client ID and secret. Spotify's PKCE flow sends `client_id` and `code_verifier` and no secret, so this change needs no secret and does not store one. A later issue can add one if the maintainer wants it.
+- **Client secret.** Spotify's PKCE flow sends `client_id` and `code_verifier` and no secret, so tape-craft needs no client secret and stores none. The README's Security section and `.sentinel/domain.json` used to say otherwise; the maintainer chose no secret, and both now match.
 - **Keys at rest.** On Linux, the Data Protection key ring is stored unencrypted in its directory. Anyone who can read that directory and the database can decrypt the tokens. Keep the directory readable only by the app user, and back it up separately from the database.
 - **Sign-in state in a cookie, not a server session store.** An encrypted, time-limited cookie needs no new store and survives a restart. Session middleware with a memory cache was rejected because it would lose sign-ins in progress on restart and adds a second session cookie.
 - **Concurrent first sign-ins of the same Spotify user** can violate the unique index; the second one sees "sign-in failed" and can retry.
@@ -88,7 +88,10 @@ Nothing is deployed yet. Before deploying, register a Spotify app (Development M
 
 ## Open questions
 
-- Should the token exchange also send the client secret, as the README's Security section says? This change follows Spotify's PKCE documentation and sends none.
+None. Two were settled by the maintainer during the run:
+
+- Features reach PostgreSQL through use-case ports in `Infrastructure/Persistence`, such as `ISignInStore`; recorded in ADR 0001, rule 3.
+- No client secret: PKCE only.
 
 ## Approval
 

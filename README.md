@@ -138,7 +138,7 @@ RPO 24 hours (daily database backups); RTO 4 hours. Liked Songs data can also be
 
 ## Security
 
-**Authentication.** Users sign in with Spotify OAuth 2.0 authorization code flow with PKCE; the app authenticates to Spotify with its client ID and secret; the app session is kept in a secure cookie.
+**Authentication.** Users sign in with Spotify OAuth 2.0 authorization code flow with PKCE; the app identifies itself to Spotify with its client ID and needs no client secret; the app session is kept in a secure cookie.
 
 **Authorisation.** One role, Listener: each user may read only their own Liked Songs and analysis and create, view or manage only playlists in their own Spotify account. The owner administers the app through server access; there is no admin role or UI.
 

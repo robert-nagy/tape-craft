@@ -1,0 +1,21 @@
+{
+  "name": "tape-craft",
+  "version": "1.0.0",
+  "description": "Tool using Spotify API that makes sense of your Liked Songs and crafts playlists based on your needs.",
+  "scripts": {
+    "test": "vitest run --passWithNoTests --exclude 'tests/integration/**' --exclude 'tests/e2e/**' --exclude 'node_modules/**'",
+    "test:integration": "vitest run --passWithNoTests --dir tests/integration",
+    "test:e2e": "playwright test --pass-with-no-tests"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "testcontainers": "^12.2.2",
+    "vitest": "^5.1.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

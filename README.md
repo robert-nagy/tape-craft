@@ -21,7 +21,7 @@ A Spotify user's Liked Songs grows into one huge unsorted list. Sorting it into 
 
 ## Getting started
 
-You need Node.js 22 or later (22.22 or later to run the tests) and a PostgreSQL database.
+You need the .NET 10 SDK, Node.js 22.22 or later, and a PostgreSQL database.
 
 ```sh
 npm ci
@@ -30,7 +30,7 @@ npm run migrate
 npm start
 ```
 
-Then open <http://localhost:3000>. In Google Chrome, use the install button in the address bar to add tape-craft as an app.
+`npm start` builds the React frontend and runs the backend (`dotnet run --project src/TapeCraft.Api`). Then open <http://localhost:3000>. In Google Chrome, use the install button in the address bar to add tape-craft as an app. While working on the frontend, `npm run dev --workspace web` serves it with hot reload on <http://localhost:5173>.
 
 For a throwaway local database:
 
@@ -43,13 +43,30 @@ until docker exec tape-craft-db pg_isready -h 127.0.0.1 -U postgres; do sleep 1;
 
 Then run `npm run migrate` and `npm start` as above.
 
+### Project structure
+
+The stack and architecture are recorded in [ADR 0001](docs/adr/0001-stack-and-architecture.md): vertical slices around a pure domain.
+
+| Path | What lives there |
+| --- | --- |
+| `src/TapeCraft.Domain/` | Entities and playlist rules, in plain C# |
+| `src/TapeCraft.Api/Features/` | One folder per use case, such as `Health/` |
+| `src/TapeCraft.Api/Infrastructure/` | Database access (EF Core) and, later, the Spotify client |
+| `src/TapeCraft.Api/Web/` | Cross-cutting HTTP concerns, such as security headers |
+| `web/` | React and TypeScript frontend; `web/src/features/` uses the same feature names |
+| `tests/` | Backend unit and integration tests, and Playwright tests in `tests/e2e/` |
+
+Architecture tests fail the build when the domain uses a framework, or one feature uses another.
+
+To change the database schema, edit the entities, then run `dotnet ef migrations add <Name> --project src/TapeCraft.Api --output-dir Infrastructure/Persistence/Migrations` (after `dotnet tool restore`).
+
 ### Configuration
 
 All configuration comes from environment variables. Never commit credentials.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | yes | | PostgreSQL connection string |
+| `DATABASE_URL` | yes | | PostgreSQL URL, `postgres://user:password@host:port/database`; `?sslmode=require` is the only option accepted |
 | `PORT` | no | `3000` | Port to listen on |
 | `HOST` | no | `127.0.0.1` (`0.0.0.0` in the container image) | Address to listen on |
 
@@ -61,9 +78,9 @@ All configuration comes from environment variables. Never commit credentials.
 
 | Command | Runs | Needs |
 | --- | --- | --- |
-| `npm test` | unit tests | |
-| `npm run test:integration` | migrations, health check and container image against a throwaway PostgreSQL | Docker |
-| `npm run test:e2e` | landing page, installability and offline page in Chromium | `npx playwright install chromium`, once |
+| `npm test` | frontend tests (Vitest), then backend unit and architecture tests (xUnit) | |
+| `npm run test:integration` | migrations, health check, shutdown and the container image, against a throwaway PostgreSQL | Docker |
+| `npm run test:e2e` | landing page, installability and offline page in Chromium, against the published app | `npx playwright install chromium`, once |
 
 ### Container
 
@@ -71,7 +88,7 @@ One image runs both the migrations and the app. With `DATABASE_URL` set to an ad
 
 ```sh
 docker build -t tape-craft .
-docker run --rm -e DATABASE_URL tape-craft node src/migrate.js
+docker run --rm -e DATABASE_URL tape-craft migrate
 docker run --rm -e DATABASE_URL -p 3000:3000 tape-craft
 ```
 
@@ -130,7 +147,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph system["tape-craft"]
-  c0["tape-craft: Node.js, Fastify"]
+  c0["tape-craft: ASP.NET Core, React"]
   end
   store[("PostgreSQL")]
   c0 --> store

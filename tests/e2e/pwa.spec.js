@@ -10,13 +10,15 @@ const databaseUrl = 'postgres://127.0.0.1:1/tapecraft';
 const test = base.extend({
   server: async ({}, use) => {
     const port = await freePort();
-    let app = await startApp({ databaseUrl, port });
+    const keysDir = await mkdtemp(path.join(tmpdir(), 'tape-craft-keys-'));
+    let app = await startApp({ databaseUrl, port, keysDir });
     await use({
       url: app.url,
       stop: () => app.stop(),
-      start: async () => (app = await startApp({ databaseUrl, port })),
+      start: async () => (app = await startApp({ databaseUrl, port, keysDir })),
     });
     await app.stop();
+    await rm(keysDir, { recursive: true, force: true });
   },
   // Chrome never offers installation in an incognito-like context, so use a real profile.
   context: async ({}, use) => {

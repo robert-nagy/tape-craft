@@ -6,9 +6,14 @@ import { LandingPage } from '../src/features/landing/LandingPage';
 afterEach(cleanup);
 
 describe('LandingPage', () => {
-  it('names the app and says sign-in is not available yet', () => {
-    render(<LandingPage />);
+  it('names the app and shows what it is given', () => {
+    render(
+      <LandingPage>
+        <p>sign-in goes here</p>
+      </LandingPage>,
+    );
     expect(screen.getByRole('heading', { level: 1, name: 'tape-craft' })).toBeDefined();
-    expect(screen.getByText(/not available yet/)).toBeDefined();
+    expect(screen.getByText('sign-in goes here')).toBeDefined();
+    expect(screen.queryByText(/not available yet/)).toBeNull();
   });
 });

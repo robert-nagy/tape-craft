@@ -9,7 +9,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    proxy: { '/healthz': 'http://127.0.0.1:3000' },
+    proxy: { '/healthz': 'http://127.0.0.1:3000', '/api': 'http://127.0.0.1:3000', '/auth': 'http://127.0.0.1:3000' },
   },
   test: {
     include: ['tests/**/*.test.{ts,tsx}'],

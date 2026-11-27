@@ -22,3 +22,23 @@ main {
 a {
   color: #ffb454;
 }
+
+.button {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  background: #1db954;
+  color: #0b0b0b;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.button:focus-visible {
+  outline: 3px solid #f4f1ea;
+  outline-offset: 2px;
+}
+
+[role='alert'] {
+  color: #ffb454;
+}
